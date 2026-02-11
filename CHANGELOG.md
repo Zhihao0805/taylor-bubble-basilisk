@@ -18,3 +18,11 @@
 
   -  M BENCHMARK_2D_TAYLOR_BUBBLE_PAPER.md
   - ?? delta_2d_taylor_bundle/
+
+## 2026-02-11 05:06:39Z — Delta package: restore solver + runnable bundle + detailed CN workflow
+
+  -  M BENCHMARK_2D_TAYLOR_BUBBLE_PAPER.md
+  -  M delta_2d_taylor_bundle/01_preprocess_build.sh
+  -  M delta_2d_taylor_bundle/04_check_outputs.sh
+  -  M delta_2d_taylor_bundle/README_CN.md
+  - ?? delta_2d_taylor_bundle/taylor_benchmark_2Dpaper_bundle.c
