@@ -19,6 +19,7 @@ backups/
 *.png
 *.jpg
 run
+run2d
 restart
 
 # editor / OS
