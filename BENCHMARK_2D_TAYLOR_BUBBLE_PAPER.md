@@ -158,3 +158,24 @@ python3 scripts/plot_2dpaper_results.py --intermediate intermediate
   - `intermediate/movie_lev9_re0p1_ca0p01_tol1p0em05_centered.mp4`
 - runtime 大文件未入 git：PASS（`intermediate/`、`*.png`、`*.mp4` 已忽略）
 
+## 8) Delta 一键运行打包（本次新增）
+为解决本机算力受限并方便后续在 Delta 复跑，本仓新增目录：
+- `delta_2d_taylor_bundle/`
+
+目录内提供：
+- `01_preprocess_build.sh`：备份旧结果 + 编译 `run2d`
+- `02_run_campaigns.sh`：按 `params_delta.env` 跑三组 campaign
+- `03_postprocess_plot.sh`：生成三张图
+- `04_check_outputs.sh`：核查 CSV/PNG/MP4 与 git 状态
+- `05_autogit.sh`：调用 `scripts/autopush.sh` 自动 git
+- `run_delta.sbatch`：Delta 批处理模板
+- `README_CN.md`：中文操作说明
+
+Delta 推荐命令（仓库根目录）：
+```bash
+bash delta_2d_taylor_bundle/01_preprocess_build.sh
+bash delta_2d_taylor_bundle/02_run_campaigns.sh
+bash delta_2d_taylor_bundle/03_postprocess_plot.sh
+bash delta_2d_taylor_bundle/04_check_outputs.sh
+bash delta_2d_taylor_bundle/05_autogit.sh "Delta run: 2D Taylor bubble campaigns"
+```
