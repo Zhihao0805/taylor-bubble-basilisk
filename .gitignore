@@ -13,10 +13,14 @@ bubble_dbg
 
 # runtime outputs (usually huge)
 intermediate/
+backups/
 *.mp4
 *.gif
 *.png
 *.jpg
+run
+run2d
+restart
 
 # editor / OS
 .vscode/

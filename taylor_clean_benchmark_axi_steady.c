@@ -20,7 +20,7 @@
 #include "navier-stokes/centered.h"
 #include "two-phase.h"
 #include "tension.h"
-/* No adapt.h/adapt_wavelet: uniform grid only */
+#include "output.h"
 
 /* ---------------- user / run-time parameters ---------------- */
 
@@ -45,6 +45,7 @@ static double cap_over_R = 1.0; // cap radius (in units of R), simple seed
 static double sum_h = 0., sum_Ub = 0., sum_xcm = 0., sum_Vgas = 0.;
 static int n_steady = 0;
 static double Vgas_ref = -1.;
+static double xcm_unwrap = 0.;
 
 /* ---------------- embedded boundary level-set (GLOBAL!) ---------------- */
 vertex scalar phi[];   // tube wall level-set, required for AMR rebuild
@@ -57,47 +58,20 @@ static inline double taylor_law (double Ca_) {
   return (1.34*c23)/(1. + 1.34*2.5*c23);
 }
 
-/* compute a simple "film thickness" proxy at a given x:
- * find maximal radius of gas (1-f) at that x and infer film thickness
+/* compute h_inf from maximum gas radius anywhere in the domain:
  * h/R = 1 - r_gas_max/R
+ * This is robust when the bubble crosses periodic boundaries.
  */
-static double film_thickness_at_x (double xprobe) {
+static double film_thickness_global (void) {
   double rmax_g = 0.;
   foreach(reduction(max:rmax_g)) {
-    if (fabs(x - xprobe) < 0.5*Delta && cs[] > 0.) {
-      // gas indicator: (1 - f) ~ 1 in gas, 0 in liquid
-      if (1. - f[] > 0.5) {
-        if (y > rmax_g) rmax_g = y;
-      }
+    if (cs[] > 0. && 1. - f[] > 0.5) {
+      if (y > rmax_g) rmax_g = y;
     }
   }
-  if (rmax_g <= 0.) return Rtube; // no gas found at that section (fallback)
+  if (rmax_g <= 0.) return Rtube;
   double h = Rtube - rmax_g;
   return h;
-}
-
-/* Find bubble extent on axis by scanning for gas cells near r=0.
- * This approximates the tip locations where f crosses 0.5 on axis. */
-static int bubble_extent_on_axis (double * x_rear, double * x_front) {
-  double xmin = 1e30, xmax = -1e30;
-  int found = 0;
-
-  foreach(reduction(min:xmin) reduction(max:xmax) reduction(+:found)) {
-    if (y <= 0.5*Delta && cs[] > 0.) {
-      if (f[] < 0.5) {
-        if (x < xmin) xmin = x;
-        if (x > xmax) xmax = x;
-        found = 1;
-      }
-    }
-  }
-
-  if (!found || xmin > xmax)
-    return 0;
-
-  *x_rear = xmin;
-  *x_front = xmax;
-  return 1;
 }
 
 /* ---------------- boundary conditions ---------------- */
@@ -128,7 +102,7 @@ int main (int argc, char ** argv)
   /* domain */
   size (Lx);
   origin (0., 0.);         // axis at y=0
-  N = 1 << MINLEVEL;
+  N = 1 << MAXLEVEL;
   periodic (right);
 
   /* embedded fractions use default refine/prolongation from embed.h */
@@ -165,6 +139,7 @@ event geometry (i = 0)
   boundary ({phi});
 
   fractions (phi, cs, fs);
+  restriction ({cs, fs});
   boundary ({cs, fs});
   return 0;
 }
@@ -189,16 +164,10 @@ event init (t = 0)
       // capsule: cylinder of half-length (Lb/2 - Rc) + hemispherical caps
       double half_cyl = max(0., 0.5*Lb - Rc);
 
-      double d; // signed distance-like: negative inside capsule
       if (fabs(dx) <= half_cyl) {
         // cylinder part
-        d = y - Rtube; // inside if y < Rtube
       } else {
         // cap part (circle in r-z)
-        double xc = (dx > 0 ? half_cyl : -half_cyl);
-        double rx = dx - xc;
-        d = sqrt(rx*rx + y*y) - Rtube; // approx cap hugging wall
-        // This is a crude seed; you can replace with a cleaner shape if desired.
       }
 
       // make a central bubble by cutting radius slightly smaller than wall
@@ -248,22 +217,26 @@ event diagnostics (i++; t <= t_end)
     }
   }
   double xcm = (Vgas > 0 ? xmom/Vgas : 0.);
-  double Ub = (i <= 1 ? 0. : (xcm - xcm_prev)/max(1e-30, (t - t_prev)));
+  double Ub = 0.;
+  if (i > 1) {
+    double dx = xcm - xcm_prev;
+    if (dx >  0.5*Lx) dx -= Lx;
+    if (dx < -0.5*Lx) dx += Lx;
+    Ub = dx/max(1e-30, (t - t_prev));
+    xcm_unwrap += dx;
+  } else
+    xcm_unwrap = xcm;
 
-  // film thickness at mid-bubble section (as in paper)
-  double x_front = 0., x_rear = 0.;
-  double xprobe = xcm;
-  if (bubble_extent_on_axis (&x_rear, &x_front))
-    xprobe = 0.5*(x_front + x_rear);
-  double h = film_thickness_at_x (xprobe);
+  double h = film_thickness_global ();
   double h_over_R = h/Rtube;
 
   double h_taylor = taylor_law(Ca);
   double rel_error = fabs(h_over_R - h_taylor)/max(1e-30, h_taylor);
 
-  fprintf (stderr,
-           "t=%8.4f Ca=%g h/R=% .8e Ub=% .6e xcm=% .6e Vgas=% .6e Taylor=% .6e\n",
-           t, Ca, h_over_R, Ub, xcm, Vgas, h_taylor);
+  if (i == 0 || i % 20 == 0)
+    fprintf (stderr,
+             "t=%8.4f Ca=%g h/R=% .8e Ub=% .6e xcm=% .6e Vgas=% .6e Taylor=% .6e\n",
+             t, Ca, h_over_R, Ub, xcm, Vgas, h_taylor);
 
   static int wrote_header = 0;
   if (i == 0 || i % 10 == 0) {
@@ -335,6 +308,13 @@ event snapshots (t += 0.05; t <= t_end)
   char name[256];
   sprintf(name, "intermediate/dump-%g", t);
   dump (file = name);
+  return 0;
+}
+
+event movie (t += 0.02; t <= t_end)
+{
+  output_ppm (f, file = "intermediate/clean_case.mp4",
+              min = 0., max = 1., n = 600, linear = true);
   return 0;
 }
 
