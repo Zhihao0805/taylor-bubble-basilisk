@@ -27,3 +27,9 @@ Thumbs.db
 *.log
 
 *.pdf
+
+# ignore local binaries / run helpers
+runbin
+
+# ignore docs folder
+docs/
