@@ -1,0 +1,29 @@
+# build artifacts / binaries
+bubble
+bubble_dbg
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+
+# Basilisk / qcc temp dirs
+.qcc*/
+*.d
+
+# runtime outputs (usually huge)
+intermediate/
+*.mp4
+*.gif
+*.png
+*.jpg
+
+# editor / OS
+.vscode/
+.DS_Store
+Thumbs.db
+
+# logs
+*.log
+
+*.pdf
