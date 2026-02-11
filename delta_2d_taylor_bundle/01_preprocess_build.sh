@@ -20,5 +20,5 @@ mkdir -p intermediate
 
 echo "[INFO] backup_dir=$BKP"
 echo "[INFO] building run2d ..."
-qcc -O2 -Wall -disable-dimensions taylor_benchmark_2Dpaper.c -lm -o run2d
+qcc -O2 -Wall -disable-dimensions delta_2d_taylor_bundle/taylor_benchmark_2Dpaper_bundle.c -lm -o run2d
 echo "[INFO] build done: $ROOT_DIR/run2d"

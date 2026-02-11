@@ -163,6 +163,7 @@ python3 scripts/plot_2dpaper_results.py --intermediate intermediate
 - `delta_2d_taylor_bundle/`
 
 目录内提供：
+- `taylor_benchmark_2Dpaper_bundle.c`（Delta 包内可编译 Basilisk 入口）
 - `01_preprocess_build.sh`：备份旧结果 + 编译 `run2d`
 - `02_run_campaigns.sh`：按 `params_delta.env` 跑三组 campaign
 - `03_postprocess_plot.sh`：生成三张图
@@ -179,3 +180,6 @@ bash delta_2d_taylor_bundle/03_postprocess_plot.sh
 bash delta_2d_taylor_bundle/04_check_outputs.sh
 bash delta_2d_taylor_bundle/05_autogit.sh "Delta run: 2D Taylor bubble campaigns"
 ```
+
+更详细中文使用流程见：
+- `delta_2d_taylor_bundle/README_CN.md`

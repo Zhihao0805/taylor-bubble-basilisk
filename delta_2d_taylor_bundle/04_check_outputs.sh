@@ -22,7 +22,10 @@ for f in "${required[@]}"; do
   echo "[OK] $f"
 done
 
-mp4="$(ls intermediate/*_centered.mp4 2>/dev/null | head -n 1 || true)"
+mp4="$(ls intermediate/movie_*_centered.mp4 2>/dev/null | head -n 1 || true)"
+if [ -z "$mp4" ]; then
+  mp4="$(ls intermediate/*_centered.mp4 2>/dev/null | head -n 1 || true)"
+fi
 if [ -z "$mp4" ]; then
   echo "[FAIL] centered mp4 not found under intermediate/"
   exit 1
